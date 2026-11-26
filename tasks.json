@@ -1,0 +1,70 @@
+{
+  "train": [
+    {
+      "cues": "guitar,piano,voice",
+      "answers": "music,song"
+    },
+    {
+      "cues": "oak,chair,forest",
+      "answers": "wood,lumber"
+    },
+    {
+      "cues": "snow,steam,river",
+      "answers": "water,ice"
+    },
+    {
+      "cues": "carrot,onion,lettuce",
+      "answers": "garden,food"
+    },
+    {
+      "cues": "hammer,axe,saw",
+      "answers": "tool"
+    },
+    {
+      "cues": "letter,photo,home",
+      "answers": "memory,family"
+    }
+  ],
+  "test": [
+    {
+      "cues": "violin,piano,sound",
+      "answers": "music,song"
+    },
+    {
+      "cues": "tree,table,chair",
+      "answers": "wood,lumber"
+    },
+    {
+      "cues": "lake,snow,steam",
+      "answers": "water,ice"
+    },
+    {
+      "cues": "cabbage,carrot,onion",
+      "answers": "garden,food"
+    },
+    {
+      "cues": "axe,saw,metal",
+      "answers": "tool"
+    },
+    {
+      "cues": "friend,love,photo",
+      "answers": "memory,family"
+    },
+    {
+      "cues": "fish,boat,river",
+      "answers": "lake,water"
+    },
+    {
+      "cues": "bread,heat,kitchen",
+      "answers": "oven"
+    },
+    {
+      "cues": "train,road,hotel",
+      "answers": "travel"
+    },
+    {
+      "cues": "cloud,rain,sun",
+      "answers": "sky,storm"
+    }
+  ]
+}
