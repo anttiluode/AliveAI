@@ -61,11 +61,11 @@ const Alive=(function(P){
     if(reward>0)for(const i of r.package)this.p.energy[i]=clamp(this.p.energy[i]+.2*reward);
    }
    if(this.learn)this.memory.add({...r,reward,expected});
-   const event={tick:r.tick,action:r.action,reward,expected,delta,patience:this.patience};this.events.push(event);return event;
+   const event={tick:r.tick,action:r.action,reward,expected,delta,patience:this.patience};this.events.push(event);if(this.events.length>1000)this.events.shift();return event;
   }
   setTag(tag){this.pending=null;this.p.setTag(tag)}
   // New sensory context without discarding the state, resource field or memories.
-  cue(cues){if(!cues.length||cues.length>=this.b.words.length)throw Error("Invalid cues");const p=this.p;p.cues=cues.slice();p.seed=mean(this.b,cues);p.exclude=new Set(cues);p.baseline=new Set(cues.flatMap(i=>P.rank(this.b,this.b.x[i],p.opts.k,this.b.d,new Set([i])).map(z=>z.i)));p.x=P.mix(this.b.d,[[p.x,.6],[p.seed,.4]]);this.pending=null;this.used.clear()}
+  cue(cues){if(!cues.length||cues.length>=this.b.words.length)throw Error("Invalid cues");const p=this.p;p.cues=cues.slice();p.seed=mean(this.b,cues);p.exclude=new Set(cues);p.baseline=new Set(cues.flatMap(i=>P.rank(this.b,this.b.x[i],p.opts.k,this.b.d,new Set([i])).map(z=>z.i)));p.x=P.mix(this.b.d,[[p.x,.6],[p.seed,.4]]);this.pending=null;this.used.clear();this.last=null}
  }
  // Independent answer lists; evaluator is the only object that knows answers.
  function task(b,raw){
@@ -114,7 +114,7 @@ const Alive=(function(P){
   const b=P.prepare(P.demo()),c=P.ids(b,"bird,shadow,winter"),m=new Memory(b),before=JSON.stringify(b.x),a=new Agent(b,c,{memory:m}),r=a.step(),i=r.workspace[0].i;
   a.nominate(i);const e=a.feedback(1);if(e.delta!==1||m.records.length!==1||a.patience<=.5)throw Error("Positive feedback");
   let ok=false;try{a.feedback(1)}catch{ok=true}if(!ok)throw Error("Double feedback");
-  const clone=new Memory(b);clone.load(JSON.parse(JSON.stringify(m.export())));if(JSON.stringify(clone.export())!==JSON.stringify(m.export())&&clone.records[0].action!==i)throw Error("Persistence");
+  const clone=new Memory(b);clone.load(JSON.parse(JSON.stringify(m.export())));if(clone.records.length!==1||clone.records[0].action!==i||clone.records[0].reward!==1||P.dot(clone.records[0].state,m.records[0].state)<1-1e-9)throw Error("Persistence");
   const learned=new Agent(b,c,{memory:m}),blank=new Agent(b,c,{memory:m,useMemory:false});learned.step();blank.step();
   if(learned.p.selectionBias[i]<=0||blank.p.selectionBias[i]!==0)throw Error("Memory is not in selection");
   const tag=new Agent(b,c,{memory:m,tag:P.ids(b,"music")});tag.step();if(tag.p.selectionBias.some(x=>x!==0))throw Error("Context gate");
