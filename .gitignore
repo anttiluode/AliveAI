@@ -1,0 +1,4 @@
+alive-results*.json
+alive-trace*.json
+alive-memory*.json
+__pycache__/
