@@ -24,8 +24,8 @@ const Alive=(function(P){
   }
  }
  class Agent{
-  constructor(b,cues,{memory=null,tag=[],learn=true,useMemory=true,regulate=true,strength=.35,reader={}}={}){
-   this.b=b;this.memory=memory||new Memory(b);this.learn=learn;this.useMemory=useMemory;this.regulate=regulate;this.strength=strength;
+  constructor(b,cues,{memory=null,tag=[],learn=true,useMemory=true,regulate=true,strength=.35,patienceDecay=.02,reader={}}={}){
+   this.b=b;this.memory=memory||new Memory(b);this.learn=learn;this.useMemory=useMemory;this.regulate=regulate;this.strength=strength;if(!Number.isFinite(patienceDecay)||patienceDecay<0||patienceDecay>1)throw Error('Invalid patience decay');this.patienceDecay=patienceDecay;
    this.p=new P.Player(b,cues,{...defaults,...reader,tag});this.base={...this.p.opts};
    this.value=0;this.patience=.5;this.novelty=0;this.lastError=0;this.pending=null;this.last=null;this.events=[];this.used=new Set();this.seen=new Set();this.total=0;
   }
@@ -37,11 +37,14 @@ const Alive=(function(P){
    for(const {r,fit} of matched){mass+=fit;bias[r.action]+=fit*r.reward;for(const i of r.package)bias[i]+=.25*fit*r.reward/r.package.length}
    if(mass)for(let i=0;i<bias.length;i++)bias[i]=this.strength*clamp(bias[i]/Math.max(1,mass),-1,1);
    p.selectionBias=bias;
+   if(this.regulate)this.patience+=this.patienceDecay*(.5-this.patience);
    p.opts.burn=this.base.burn*(this.regulate?clamp(1.5-this.patience,.35,1.5):1);
    const r=p.step();this.total++;
    this.novelty=.9*this.novelty+.1*r.novel/Math.max(1,r.workspace.length);
    for(const w of r.workspace)this.seen.add(w.i);
-   this.last={...r,value:this.value,patience:this.patience,novelty:this.novelty,predictionError:this.lastError,recalled:matched.length,burn:p.opts.burn};
+   this.last={...r,value:this.value,patience:this.patience,novelty:this.novelty,predictionError:this.lastError,recalled:matched.length,recallFits:matched.map(({r,fit})=>({action:r.action,reward:r.reward,fit})),maxAbsBias:bias.reduce((m,v)=>Math.max(m,Math.abs(v)),0),burn:p.opts.burn};
+   // Export the enriched record, not the upstream Player-only record.
+   p.history[p.history.length-1]=this.last;
    // Bound live history; keep cumulative counts separately.
    if(p.history.length>1000)p.history.shift();
    return this.last;
@@ -120,8 +123,10 @@ const Alive=(function(P){
   const tag=new Agent(b,c,{memory:m,tag:P.ids(b,"music")});tag.step();if(tag.p.selectionBias.some(x=>x!==0))throw Error("Context gate");
   const n=new Agent(b,c,{memory:m});let z=n.step();n.nominate(z.workspace[0].i);n.feedback(-1);if(n.patience>=.5||m.records.at(-1).reward!==-1)throw Error("Negative feedback");
   const count=m.records.length;n.cue(P.ids(b,"music,song"));n.step();if(m.records.length!==count||JSON.stringify(b.x)!==before)throw Error("Cue or bank mutation");
+  const relax=new Agent(b,c,{patienceDecay:.02});relax.patience=.87;for(let j=0;j<100;j++)relax.step();if(Math.abs(relax.patience-(.5+.37*Math.pow(.98,100)))>1e-9)throw Error('Patience relaxation');
+  if(learned.p.history.at(-1).recalled<1||learned.p.history.at(-1).maxAbsBias<=0||blank.p.history.at(-1).recalled!==0)throw Error('Recall telemetry');
   const t={train:[{cues:"bird,winter",answers:"snow"}],test:[{cues:"oak,tree",answers:"wood"}]};const bench=benchmark(b,t,{budget:5,beats:10,epochs:1});if(Object.keys(bench.arms.heldout).length!==4)throw Error("Benchmark");
-  return [...P.selfTest(),"signed external feedback and one-shot credit","memory round-trip and selection bias","context gate","cue injection with frozen bank","held-out frozen-memory comparison"];
+  return [...P.selfTest(),"signed external feedback and one-shot credit","memory round-trip and selection bias","context gate","cue injection with frozen bank","held-out frozen-memory comparison","patience relaxation and actual recall telemetry"];
  }
  return {defaults,Memory,Agent,benchmark,selfTest,signature};
 })(typeof module!=="undefined"?require("./play.js"):Play);
